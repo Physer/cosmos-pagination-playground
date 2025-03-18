@@ -1,9 +1,12 @@
+using CosmosPagination.Cosmos;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.RegisterCosmosDependencies();
 
 var app = builder.Build();
 
