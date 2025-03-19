@@ -1,3 +1,5 @@
-﻿namespace CosmosPagination.Cosmos;
+﻿using Newtonsoft.Json;
 
-public record Product(string id, string Name, decimal Price);
+namespace CosmosPagination.Cosmos;
+
+public record Product([property: JsonProperty("id")] string Id, string Name, decimal Price);

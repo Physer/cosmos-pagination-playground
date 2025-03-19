@@ -9,11 +9,11 @@
     <form asp-page-handler="seed" method="post">
         <button class="btn btn-primary">Seed data</button>
     </form>
-    <button type="button" class="btn btn-danger">Delete data</button>
+    <form asp-page-handler="delete" method="post">
+        <button class="btn btn-danger">Delete data</button>
+    </form>
 </div>
 
-<div>
-    <form asp-page-handler="getall" method="post">
-        <button class=btn btn-primary>View all data unpaginated</button>
-    </form>
+<div class="alert alert-success">
+    @Model.Message
 </div>
