@@ -1,0 +1,42 @@
+﻿@page
+@model CosmosPagination.Web.Pages.ViewDataModel
+@{
+    ViewData["Title"] = "View data";
+}
+
+<div>
+    <form class="d-inline" asp-page-handler="loadunpaginated" method="post">
+        <button class="btn btn-primary">Load all data unpaginated</button>
+    </form>
+    <form class="d-inline" asp-page-handler="loadskiptake" method="post">
+        <button class="btn btn-info">Load data using skip and take</button>
+    </form>
+    <form class="d-inline" asp-page-handler="loadtokens" method="post">
+        <button class="btn btn-info">Load data using continuation tokens</button>
+    </form>
+</div>
+<br />
+@if (Model.Products.Any())
+{
+    <div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in Model.Products)
+                {
+                    <tr>
+                        <td>@product.Id</td>
+                        <td>@product.Name</td>
+                        <td>@product.Price</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
