@@ -18,26 +18,19 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
 
     public async Task Seed(int count = 1000)
     {
-        _logger.LogInformation("Seeding {Count} products", count);
-
-        _logger.LogInformation("Getting database and creating container if it does not exist");
+        _logger.LogInformation("Seeding database with {Count} entries", count);
         var (_, container) = await GetDatabaseAndContainer();
-        _logger.LogInformation("Created {ContainerId} Cosmos container", container.Id);
-
-        _logger.LogInformation("Generating {Count} dummy products", count);
         var products = new Faker<Product>()
             .CustomInstantiator(faker => new(Guid.NewGuid().ToString(), faker.Commerce.ProductName(), decimal.Parse(faker.Commerce.Price())))
             .Generate(count);
 
-        _logger.LogInformation("Upserting products...");
         foreach (var product in products)
             await container.UpsertItemAsync(product, new(_partitionKey));
-        _logger.LogInformation("Upserted {Count} products", count);
     }
 
     public async Task<IEnumerable<Product>> GetAll()
     {
-        _logger.LogInformation("Retrieving all items from Cosmos");
+        _logger.LogInformation("Retrieving all items unpaginated");
         var (_, container) = await GetDatabaseAndContainer();
         List<Product> products = [];
         using FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>(queryDefinition: null, requestOptions: new QueryRequestOptions()
@@ -47,19 +40,15 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
 
         while (resultSet.HasMoreResults)
         {
-            _logger.LogInformation("Items are available in Cosmos");
-            _logger.LogInformation("Reading next batch of items");
             FeedResponse<Product> response = await resultSet.ReadNextAsync();
             products.AddRange(response);
         }
-
-        _logger.LogInformation("Retrieved {Count} items from Cosmos", products.Count);
         return products;
     }
 
     public async Task<long> GetItemCount()
     {
-        _logger.LogInformation("Retrieving item count from Cosmos");
+        _logger.LogInformation("Retrieving item count");
         var (_, container) = await GetDatabaseAndContainer();
         var queryDefinition = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
         var queryRequestOptions = new QueryRequestOptions
@@ -76,30 +65,26 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
             count += response.Resource.FirstOrDefault();
         }
 
-        _logger.LogInformation("Retrieved {Count} items from Cosmos", count);
         return count;
     }
 
     public async Task<IEnumerable<Product>> GetPaginatedResults(int pageNumber, int pageSize)
     {
-        _logger.LogInformation("Retrieving items from Cosmos on page {PageNumber}", pageNumber);
+        _logger.LogInformation("Retrieving paginated results with SKIP and TAKE for page {PageSize} on page {PageNumber}", pageSize, pageNumber);
         var (_, container) = await GetDatabaseAndContainer();
         List<Product> products = [];
         using FeedIterator<Product> resultSet = container.GetItemLinqQueryable<Product>().Skip((pageNumber - 1) * pageSize).Take(pageSize).ToFeedIterator();
         while (resultSet.HasMoreResults)
         {
-            _logger.LogInformation("Items are available in Cosmos");
-            _logger.LogInformation("Reading next batch of items");
             FeedResponse<Product> response = await resultSet.ReadNextAsync();
             products.AddRange(response);
         }
-
-        _logger.LogInformation("Retrieved {Count} items from Cosmos", products.Count);
         return products;
     }
 
     public async Task<(IEnumerable<Product>, string)> GetTokenPaginatedResults(int pageSize, string? continuationToken = null)
     {
+        _logger.LogInformation("Retrieving paginated results with continuation token for page size {PageSize}", pageSize);
         var (_, container) = await GetDatabaseAndContainer();
         List<Product> products = [];
 
@@ -117,6 +102,7 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
 
     public async Task Delete()
     {
+        _logger.LogInformation("Deleting database and container");
         var (database, _) = await GetDatabaseAndContainer();
         await database.DeleteAsync();
     }
