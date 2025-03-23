@@ -1,5 +1,6 @@
 ﻿using Bogus;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Linq;
 using Microsoft.Extensions.Logging;
 using Database = Microsoft.Azure.Cosmos.Database;
 
@@ -43,6 +44,47 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
             PartitionKey = new PartitionKey(_partitionKey)
         });
 
+        while (resultSet.HasMoreResults)
+        {
+            _logger.LogInformation("Items are available in Cosmos");
+            _logger.LogInformation("Reading next batch of items");
+            FeedResponse<Product> response = await resultSet.ReadNextAsync();
+            products.AddRange(response);
+        }
+
+        _logger.LogInformation("Retrieved {Count} items from Cosmos", products.Count);
+        return products;
+    }
+
+    public async Task<long> GetItemCount()
+    {
+        _logger.LogInformation("Retrieving item count from Cosmos");
+        var (_, container) = await GetDatabaseAndContainer();
+        var queryDefinition = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
+        var queryRequestOptions = new QueryRequestOptions
+        {
+            PartitionKey = new PartitionKey(_partitionKey)
+        };
+
+        using var queryIterator = container.GetItemQueryIterator<long>(queryDefinition, requestOptions: queryRequestOptions);
+        long count = 0;
+
+        while (queryIterator.HasMoreResults)
+        {
+            var response = await queryIterator.ReadNextAsync();
+            count += response.Resource.FirstOrDefault();
+        }
+
+        _logger.LogInformation("Retrieved {Count} items from Cosmos", count);
+        return count;
+    }
+
+    public async Task<IEnumerable<Product>> GetPaginatedResults(int pageNumber, int pageSize)
+    {
+        _logger.LogInformation("Retrieving items from Cosmos on page {PageNumber}", pageNumber);
+        var (_, container) = await GetDatabaseAndContainer();
+        List<Product> products = [];
+        using FeedIterator<Product> resultSet = container.GetItemLinqQueryable<Product>().Skip((pageNumber - 1) * pageSize).Take(pageSize).ToFeedIterator();
         while (resultSet.HasMoreResults)
         {
             _logger.LogInformation("Items are available in Cosmos");
