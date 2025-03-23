@@ -14,6 +14,7 @@
     </form>
     <form class="d-inline" asp-page-handler="loadtokens" method="post">
         <button class="btn btn-info">Load data using continuation tokens</button>
+        <input type="hidden" name="providedToken" value="@Model.ContinuationToken" />
     </form>
 </div>
 <br />
@@ -41,14 +42,26 @@
         </table>
     </div>
 }
-<div>
-    @{
-        for (int i = 1; i < Model.PageCount; i++)
-        {
-            <form class="d-inline" asp-page-handler="loadskiptake" method="post">
-                <button>@i</button>
-                <input type="hidden" name="pageNumber" value="@i" />
-            </form>
+@if (Model.PageCount > 1)
+{
+    <div>
+        @{
+            for (int i = 1; i < Model.PageCount; i++)
+            {
+                <form class="d-inline" asp-page-handler="loadskiptake" method="post">
+                    <button class="link-primary">@i</button>
+                    <input type="hidden" name="pageNumber" value="@i" />
+                </form>
+            }
         }
-    }
-</div>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.ContinuationToken))
+{
+    <div>
+        <form class="d-inline" asp-page-handler="loadtokens" method="post">
+            <button class="btn btn-primary">Next page</button>
+            <input type="hidden" name="providedToken" value="@Model.ContinuationToken" />
+        </form>
+    </div>
+}

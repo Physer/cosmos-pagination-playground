@@ -8,6 +8,7 @@ public class ViewDataModel(IRepository repository, IMemoryCache memoryCache) : P
 {
     public IEnumerable<Product> Products { get; private set; } = [];
     public long PageCount { get; private set; } = 1;
+    public string? ContinuationToken { get; private set; }
 
     private readonly IRepository _repository = repository;
     private readonly IMemoryCache _memoryCache = memoryCache;
@@ -27,5 +28,11 @@ public class ViewDataModel(IRepository repository, IMemoryCache memoryCache) : P
     {
         PageCount = _memoryCache.Get<long>(_pageCountKey);
         Products = await _repository.GetPaginatedResults(pageNumber, _pageSize);
+    }
+    public async Task OnPostLoadTokens(string? providedToken = null)
+    {
+        var (products, continuationToken) = await _repository.GetTokenPaginatedResults(_pageSize, providedToken);
+        Products = products;
+        ContinuationToken = continuationToken;
     }
 }

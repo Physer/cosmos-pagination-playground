@@ -2,6 +2,7 @@
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 using Microsoft.Extensions.Logging;
+using System.Drawing.Printing;
 using Database = Microsoft.Azure.Cosmos.Database;
 
 namespace CosmosPagination.Cosmos;
@@ -95,6 +96,23 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
 
         _logger.LogInformation("Retrieved {Count} items from Cosmos", products.Count);
         return products;
+    }
+
+    public async Task<(IEnumerable<Product>, string)> GetTokenPaginatedResults(int pageSize, string? continuationToken = null)
+    {
+        var (_, container) = await GetDatabaseAndContainer();
+        List<Product> products = [];
+
+        using FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>(queryDefinition: null, requestOptions: new QueryRequestOptions()
+        {
+            MaxItemCount = pageSize,
+            PartitionKey = new PartitionKey(_partitionKey)
+        }, continuationToken: continuationToken);
+        var response = await resultSet.ReadNextAsync();
+        products.AddRange(response);
+
+        continuationToken = response.ContinuationToken;
+        return (products, continuationToken);
     }
 
     public async Task Delete()
