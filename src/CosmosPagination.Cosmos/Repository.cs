@@ -2,7 +2,6 @@
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Linq;
 using Microsoft.Extensions.Logging;
-using System.Drawing.Printing;
 using Database = Microsoft.Azure.Cosmos.Database;
 
 namespace CosmosPagination.Cosmos;
