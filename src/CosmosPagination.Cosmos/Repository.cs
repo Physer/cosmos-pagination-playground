@@ -13,7 +13,6 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
 
     private const string _databaseName = "cosmosplayground";
     private const string _containerName = "products";
-    private const string _partitionKey = "id";
 
     public async Task Seed(int count = 1000)
     {
@@ -24,7 +23,7 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
             .Generate(count);
 
         foreach (var product in products)
-            await container.UpsertItemAsync(product, new(_partitionKey));
+            await container.UpsertItemAsync(product, new(product.Id));
     }
 
     public async Task<IEnumerable<Product>> GetAll()
@@ -32,10 +31,7 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
         _logger.LogInformation("Retrieving all items unpaginated");
         var (_, container) = await GetDatabaseAndContainer();
         List<Product> products = [];
-        using FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>(queryDefinition: null, requestOptions: new QueryRequestOptions()
-        {
-            PartitionKey = new PartitionKey(_partitionKey)
-        });
+        using FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>();
 
         while (resultSet.HasMoreResults)
         {
@@ -50,12 +46,8 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
         _logger.LogInformation("Retrieving item count");
         var (_, container) = await GetDatabaseAndContainer();
         var queryDefinition = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
-        var queryRequestOptions = new QueryRequestOptions
-        {
-            PartitionKey = new PartitionKey(_partitionKey)
-        };
 
-        using var queryIterator = container.GetItemQueryIterator<long>(queryDefinition, requestOptions: queryRequestOptions);
+        using var queryIterator = container.GetItemQueryIterator<long>(queryDefinition);
         long count = 0;
 
         while (queryIterator.HasMoreResults)
@@ -90,7 +82,6 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
         using FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>(queryDefinition: null, requestOptions: new QueryRequestOptions()
         {
             MaxItemCount = pageSize,
-            PartitionKey = new PartitionKey(_partitionKey)
         }, continuationToken: continuationToken);
         var response = await resultSet.ReadNextAsync();
         products.AddRange(response);
@@ -110,7 +101,7 @@ internal class Repository(CosmosClient cosmosClient, ILogger<Repository> logger)
     {
         var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(_databaseName);
         var database = databaseResponse.Database;
-        var container = await database.CreateContainerIfNotExistsAsync(_containerName, $"/{_partitionKey}");
+        var container = await database.CreateContainerIfNotExistsAsync(_containerName, "/id");
         return (database, container);
     }
 }
